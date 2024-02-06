@@ -19,13 +19,13 @@
 			]
 		}
 	},
-		"postCreateCommand": "pip3 install --user -r requirements.txt && mypy --install-types --non-interactive"
+		"postCreateCommand": "pip3 install --user -r requirements.txt && mypy --install-types --non-interactive",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [8765],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip3 install --user -r requirements.txt",
