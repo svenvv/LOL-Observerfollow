@@ -11,17 +11,25 @@ ws_url = "ws://sven.thaus:8765"
 
 async def collect_render_data():
 #grab the data from the replay api using httpx
-    async with httpx.AsyncClient(verify=False) as client:
-        r = await client.get('https://127.0.0.1:2999/replay/render')
-        data = r.json()
-        return data
+    try:
+        async with httpx.AsyncClient(verify=False) as client:
+            r = await client.get('https://127.0.0.1:2999/replay/render')
+            data = r.json()
+            return data
+    except httpx.HTTPError as exc:
+        print (f"can't connect to the replay api: {exc} retrying...")
+        await collect_render_data()
     
 async def collect_playback_data():
 #grab the data from the replay api using httpx
-    async with httpx.AsyncClient(verify=False) as client:
-        r = await client.get('https://127.0.0.1:2999/replay/playback')
-        data = r.json()
-        return data
+    try:
+        async with httpx.AsyncClient(verify=False) as client:
+            r = await client.get('https://127.0.0.1:2999/replay/playback')
+            data = r.json()
+            return data
+    except httpx.HTTPError as exc:
+        print (f"can't connect to the replay api: {exc} retrying...")
+        await collect_playback_data()
     
 async def send_data(url):
     while True:
