@@ -13,7 +13,8 @@ import aiohttp
 
 websocket_data = {}
 old_render_data: dict = {}
-game_paused = False
+remote_game_paused = True
+local_game_paused = True
 
 def create_render_data_diff(new_data) -> dict:
     global old_render_data
@@ -33,7 +34,7 @@ def create_render_data_diff(new_data) -> dict:
 sequence_position: list = []
 sequence_rotation: list = []
 sequence_speed: list = []
-SEQUENCE_LEN = 20
+SEQUENCE_LEN = 25
 async def sequence_handler(render: dict, playback:dict) -> dict:
     global sequence_position
     global sequence_rotation
@@ -84,10 +85,12 @@ async def sequence_handler(render: dict, playback:dict) -> dict:
         last_z_pos = sequence_position[-2]['z']
         current_x_pos = sequence_position[-1]['x']
         current_z_pos = sequence_position[-1]['z']
-        if abs(current_x_pos - last_x_pos) < 100 or abs(current_z_pos - last_z_pos) < 100:
+        if abs(current_x_pos - last_x_pos) < 200 or abs(current_z_pos - last_z_pos) < 200:
             position_blend = 'linear'
         else:
             position_blend = 'snap'
+            #set the time to be like 1 microsecond after the previous time. this will make the sequence endpoint actually snap instead of doing some weird interpolation
+            sequence_speed[-1]['time'] = sequence_speed[-2]['time'] + 0.000001
 
     #create the json object to send to the sequence endpoint
     position_data: list = []
@@ -127,7 +130,7 @@ async def server(websocket, path):
 
 async def data_loop():
     global websocket_data
-    global game_paused
+    global remote_game_paused, local_game_paused
     global sequence_rotation, sequence_position, sequence_speed
     old_websocket_data = {} 
     while True:
@@ -147,7 +150,7 @@ async def data_loop():
             sequence_data = await sequence_handler(render_data, playback_data)
             if len(sequence_data['cameraPosition']) == SEQUENCE_LEN-1:
                 async with aiohttp.ClientSession() as session:                                                                                        
-                        async with session.post('https://127.0.0.1:2999/replay/playback', data=json.dumps(sequence_data['playbackSpeed'][0]), ssl=False, headers={'Content-Type': 'application/json'}) as resp:
+                        async with session.post('https://127.0.0.1:2999/replay/playback', data=json.dumps(sequence_data['playbackSpeed'][int(SEQUENCE_LEN/4)]), ssl=False, headers={'Content-Type': 'application/json'}) as resp:
                             pass
             async with aiohttp.ClientSession() as session:
                 async with session.post('https://127.0.0.1:2999/replay/sequence', data=json.dumps(sequence_data), ssl=False, headers={'Content-Type': 'application/json'}) as resp:
@@ -161,41 +164,46 @@ async def data_loop():
                     async with session.post('https://127.0.0.1:2999/replay/render', data=json.dumps(render_diff), ssl=False, headers={'Content-Type': 'application/json'}) as resp:
                         pass
 
-            #if an observer (un)pauses the game, we need to (un)pause the game in the local replay api as well. might as well set the correct time and speed while we're at it
+            #if an observer (un)pauses the game, we need to (un)pause the game in the local replay api as well.
             if "paused" in playback_data:
-                paused = playback_data['paused']
-                if paused != game_paused:
-                    game_paused = paused
+                remote_game_paused = playback_data['paused']
+                if local_game_paused != remote_game_paused:
                     sequence_rotation = []
                     sequence_position = []
                     sequence_speed = []
+                    print(f'clearing sequence. remote paused: {remote_game_paused}, local paused: {local_game_paused}')
                     async with aiohttp.ClientSession() as session:
+                        async with session.post('https://127.0.0.1:2999/replay/playback', data=json.dumps({"paused": remote_game_paused}), ssl=False, headers={'Content-Type': 'application/json'}) as resp:
+                            pass
                         async with session.post('https://127.0.0.1:2999/replay/sequence', data="{}", ssl=False, headers={'Content-Type': 'application/json'}) as resp:
                             pass
 
 async def local_gamestate_loop():
-    global game_paused
-    global sequence_speed
+    global local_game_paused
+    global sequence_speed, sequence_rotation, sequence_position
     while True:
         await asyncio.sleep(0.1)
         async with aiohttp.ClientSession() as session:
             async with session.get('https://127.0.0.1:2999/replay/playback', ssl=False) as resp:
                 data = await resp.json()
-                if 'paused' in data:
-                    game_paused = data['paused']
-                if 'time' in data:
-                    #if the time differs by more than 0.1 seconds, we need to clear the sequence
-                    if len(sequence_speed) == SEQUENCE_LEN and abs(sequence_speed[0]['time'] - data['time']) > 0.1:
-                        sequence_rotation = []
-                        sequence_position = []
-                        sequence_speed = []
-                        #clear the sequence in the local replay api
-                        async with session.post('https://127.0.0.1:2999/replay/sequence', data="{}", ssl=False, headers={'Content-Type': 'application/json'}) as resp:
-                            pass
+                if 'paused' in data and 'seeking' in data:
+                    if not data['seeking']:
+                        local_game_paused = data['paused']
+                        if 'time' in data:
+                            #if the time differs by more than 1 seconds, we need to clear the sequence
+                            if len(sequence_speed) == SEQUENCE_LEN and abs(sequence_speed[0]['time'] - data['time']) > 0.5:
+                                print(f'clearing sequence. old time: {sequence_speed[0]["time"]}, new time: {data["time"]}')
+                                sequence_rotation = []
+                                sequence_position = []
+                                sequence_speed = []
+                                #clear the sequence in the local replay api
+                                async with session.post('https://127.0.0.1:2999/replay/sequence', data="{}", ssl=False, headers={'Content-Type': 'application/json'}) as resp:
+                                    pass
 
 
 start_server = websockets.serve(server, "0.0.0.0", 8765)
 
 asyncio.get_event_loop().create_task(data_loop())
+asyncio.get_event_loop().create_task(local_gamestate_loop())
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
