@@ -22,15 +22,17 @@ To make this actually suitable for use, the following 2 things still have to be 
 ### Follower PC
 
 1. Forward port `8765`, or change the port number in `follwer/main.py` to the forwarded port of your choice.
-2. Start League of Legends and open a replay. Make sure the Follower and Observer are in the same game.
-3. Once the game has started, run `python follower/main.py` to start the follower.
+2. Enable the [Replay API](https://developer.riotgames.com/docs/lol#game-client-api_replay-api) for your game client.
+3. Start League of Legends and open a replay. Make sure the Follower and Observer are in the same game.
+4. Once the game has started, run `python follower/main.py` to start the follower.
 
 Your Follower PC will now copy the camera movements and interface toggles of the Observer PC.
 
 ### Observer PC
 
 1. Change the `WS_URL` in `observer/main.py` to the address of the follower. It should look like `ws://<FOLLOWER_IP>:<PORT>`.
-2. Start League of Legends and open a replay. Make sure the Follower and Observer are in the same game.
-3. Once the game has started, run `python observer/main.py` to start the observer.
+2. Enable the [Replay API](https://developer.riotgames.com/docs/lol#game-client-api_replay-api) for your game client.
+3. Start League of Legends and open a replay. Make sure the Follower and Observer are in the same game.
+4. Once the game has started, run `python observer/main.py` to start the observer.
 
 Your Observer PC will now send the camera movements and interface toggles to the Follower PC.
