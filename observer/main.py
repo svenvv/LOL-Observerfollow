@@ -4,7 +4,7 @@
 '''
 import asyncio
 import websockets
-import httpx
+import httpx #TODO: replace with aiohttp
 import json
 
 ws_url = "ws://sven.thaus:8765"
