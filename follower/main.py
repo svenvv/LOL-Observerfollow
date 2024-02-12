@@ -26,7 +26,6 @@ sequence_handler = SequenceHandler(SEQUENCE_LEN, SEQUENCE_DIVIDER)
 local_game_paused = True
 local_playback_state: dict = {}
 
-
 async def post_playback_data(data: dict):
     try:
         async with aiohttp.ClientSession() as session:
