@@ -19,8 +19,9 @@ from src.sequence_handler import SequenceHandler
 SEQUENCE_LEN = 25
 SEQUENCE_DIVIDER = 4
 MAX_TIME_DIFF = 0.5
+WEBSOCKET_PORT = 8765
 
-websocket_server = WebsocketServer(8765)
+websocket_server = WebsocketServer(WEBSOCKET_PORT)
 render_handler = RenderHandler(SEQUENCE_LEN, SEQUENCE_DIVIDER)
 sequence_handler = SequenceHandler(SEQUENCE_LEN, SEQUENCE_DIVIDER)
 local_game_paused = True
