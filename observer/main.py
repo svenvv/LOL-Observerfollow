@@ -7,7 +7,7 @@ import websockets
 import httpx #TODO: replace with aiohttp
 import json
 
-ws_url = "ws://sven.thaus:8765"
+WS_URL = "ws://change.me:8765"
 
 async def collect_render_data():
 #grab the data from the replay api using httpx
@@ -46,4 +46,4 @@ async def send_data(url):
             await asyncio.sleep(1)  # Wait for 1 second before reconnecting
 
 # Run the send_data coroutine
-asyncio.run(send_data(ws_url))
+asyncio.run(send_data(WS_URL))
